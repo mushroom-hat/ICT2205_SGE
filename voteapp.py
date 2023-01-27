@@ -75,19 +75,6 @@ def login():
                 format=serialization.PublicFormat.SubjectPublicKeyInfo
             ).decode()
 
-            # Formatting the key into 1 line
-            public_key_str = public_key_str.replace("-----BEGIN PUBLIC KEY-----\n", "")
-            public_key_str = public_key_str.replace("-----END PUBLIC KEY-----\n", "")
-            public_key_str = public_key_str.replace("\n", "")
-
-            private_key_str = private_key_str.replace("-----BEGIN PRIVATE KEY-----\n", "")
-            private_key_str = private_key_str.replace("-----END PRIVATE KEY-----\n", "")
-            private_key_str = private_key_str.replace("\n", "")
-
-            print('Public key:', public_key_str)
-            print('Private key:', private_key_str)
-            print('Session ID:', session['id'])
-
             cursor.execute('UPDATE accounts SET pubkey = %s, privkey = %s WHERE id = %s', (public_key_str, private_key_str, session['id']))
             mysql.connection.commit() # Commit the update
             cursor.close()
@@ -120,7 +107,14 @@ def home():
         votekey = session['pubkey']
         if votekey == None or votekey == '':
             cursor.execute('SELECT pubkey FROM accounts WHERE id = %s', (session['id'],))
-            votekey = cursor.fetchone()['pubkey']
+            public_key_nice = cursor.fetchone()['pubkey']
+
+            # Formatting the public key for printing later
+            public_key_nice = public_key_nice.replace("-----BEGIN PUBLIC KEY-----\n", "")
+            public_key_nice = public_key_nice.replace("-----END PUBLIC KEY-----\n", "")
+            public_key_nice = public_key_nice.replace("\n", "")
+            votekey = public_key_nice
+
         cursor.execute('SELECT * FROM candidates')
         candidates = cursor.fetchall()
 
