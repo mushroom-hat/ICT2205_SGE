@@ -1,0 +1,25 @@
+{% extends 'layout.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h2>Welcome, {{ username }}!</h2>
+<br>Please cast your <b>single</b> vote for your preferred candidate. Once your vote is submitted it cannot be changed. Your vote is fully <b>ANONYMOUS</b> with our <b>Zero Knowledge Proof (ZKP)</b> system. The voting key is used to ensure <FONT COLOR="GREEN"><b>fair and secure voting</b></FONT> when tabulating the votes.
+<p>
+  <b>Your voting key is:</b> {{votekey}}
+</p>
+<h2>Your Candidates</h2>
+
+<table>
+  <tr>
+    <th>Candidate ID</th>
+    <th>Candidate Name</th>
+  </tr>
+  {% for candidate in candidates %}
+  <tr>
+    <td>{{candidate['id']}}</td>
+    <td>{{candidate['name']}}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}
