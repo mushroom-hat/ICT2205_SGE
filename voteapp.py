@@ -26,7 +26,7 @@ def index():
 # http://localhost:5000/pythonlogin/ - the following will be our login page, which will use both GET and POST requests
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Output message if something goes wrong...
+    # Output message if authentication error
     msg = ''
     username = ''
     password = ''
@@ -37,7 +37,7 @@ def login():
         username = request.form['username']
         password = request.form['password']
 
-    # Check if account exists using MySQL
+    # Checking if account exists in MySQL DB (All queries parametererized to prevent SQL injection)
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cursor.execute('SELECT * FROM accounts WHERE username = %s AND password = %s', (username, password))
     # Fetch one record and return result
@@ -48,7 +48,7 @@ def login():
 
     # If account exists n accounts table in out database
     if account:
-        # Create session data, we can access this data in other routes
+        # Create session data accesible for other routes in flask
         session['loggedin'] = True
         session['id'] = account['id']
         session['username'] = account['username']
@@ -79,16 +79,16 @@ def login():
             mysql.connection.commit() # Commit the update
             cursor.close()
 
-        # Redirect to home page
+        # Redirect to home page after successful login
         return redirect(url_for('home'))
     else:
-        # Account doesnt exist or username/password incorrect
+        # If account doesnt exist or username/password incorrect
         return render_template('index.html', msg='Incorrect username or password!')
     
-    # Show the login form with message (if any)
+    # If it reaches here, some weird and unexpected error occured
     return render_template('index.html', msg='Strange Error Occured!')
 
-    # http://localhost:5000/python/logout - this will be the logout page
+# http://localhost:5000/logout - this will be the logout page
 @app.route('/logout')
 def logout():
     # Remove session data, this will log the user out
@@ -98,7 +98,7 @@ def logout():
    # Redirect to login page
    return render_template('index.html', msg='')
 
-# http://localhost:5000/pythinlogin/home - this will be the home page, only accessible for loggedin users
+# http://localhost:5000/home - this will be the home voting page, only accessible for loggedin users
 @app.route('/home')
 def home():
     # Check if user is loggedin
@@ -108,20 +108,24 @@ def home():
         if votekey == None or votekey == '':
             cursor.execute('SELECT pubkey FROM accounts WHERE id = %s', (session['id'],))
             public_key_nice = cursor.fetchone()['pubkey']
+        else:
+            public_key_nice = votekey
 
-            # Formatting the public key for printing later
-            public_key_nice = public_key_nice.replace("-----BEGIN PUBLIC KEY-----\n", "")
-            public_key_nice = public_key_nice.replace("-----END PUBLIC KEY-----\n", "")
-            public_key_nice = public_key_nice.replace("\n", "")
-            votekey = public_key_nice
-
+        # Formatting the public key for printing later
+        public_key_nice = public_key_nice.replace("-----BEGIN PUBLIC KEY-----\n", "")
+        public_key_nice = public_key_nice.replace("-----END PUBLIC KEY-----\n", "")
+        public_key_nice = public_key_nice.replace("\n", "")
+        
         cursor.execute('SELECT * FROM candidates')
         candidates = cursor.fetchall()
 
         # User is loggedin show them the home page
-        return render_template('home.html', username=session['username'], candidates=candidates, votekey=votekey)
-
+        return render_template('home.html', username=session['username'], candidates=candidates, public_key_nice=public_key_nice)
         cursor.close()
 
     # User is not loggedin redirect to login page
     return redirect(url_for('index'))
+
+# Specifying our self signed SSL certificate (Realisticly should pay for a real one, self signed for demo purposes)
+if __name__ == "__main__":
+    app.run(ssl_context=('cert.pem', 'key.pem'))
