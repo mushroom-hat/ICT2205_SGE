@@ -14,11 +14,18 @@
   <tr>
     <th>Candidate ID</th>
     <th>Candidate Name</th>
+    <th>Cast Vote Here</th>
   </tr>
   {% for candidate in candidates %}
   <tr>
     <td>{{candidate['id']}}</td>
     <td>{{candidate['name']}}</td>
+    <td>
+      <form method="POST">
+        <input type="hidden" name="candidate_id" value="{{candidate['id']}}">
+        <button type="submit">VOTE</button> 
+      </form>
+    </td>
   </tr>
   {% endfor %}
 </table>

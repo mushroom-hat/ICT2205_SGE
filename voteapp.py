@@ -53,6 +53,7 @@ def login():
         session['id'] = account['id']
         session['username'] = account['username']
         session['pubkey'] = account['pubkey']
+        session['role'] = 'user' # Set the role to user
 
         if session['pubkey'] == None or session['pubkey'] == '':
             private_key = rsa.generate_private_key(
@@ -99,8 +100,12 @@ def logout():
    return render_template('index.html', msg='')
 
 # http://localhost:5000/home - this will be the home voting page, only accessible for loggedin users
-@app.route('/home')
+@app.route('/home', methods=['GET', 'POST'])
 def home():
+    if session['role'] == 'user':
+        pass
+    else:
+        return redirect(url_for('index'))
     # Check if user is loggedin
     if 'loggedin' in session:
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
@@ -119,12 +124,75 @@ def home():
         cursor.execute('SELECT * FROM candidates')
         candidates = cursor.fetchall()
 
+        if request.method == 'POST':
+            # Get the ID that use voted from POST FORM
+            candidate_id = request.form['candidate_id']
+            # Change print statement to whatever the system do with the vote
+            print(f"User voted for candidate with ID: {candidate_id}")
+
         # User is loggedin show them the home page
         return render_template('home.html', username=session['username'], candidates=candidates, public_key_nice=public_key_nice)
         cursor.close()
 
     # User is not loggedin redirect to login page
     return redirect(url_for('index'))
+
+@app.route('/admin')
+def admin():
+    return render_template('admin.html')
+
+@app.route('/adminlogin', methods=['GET', 'POST'])
+def adminlogin():
+    # Output message if authentication error
+    msg = ''
+    username = ''
+    password = ''
+    
+    # Check if "username" and "password" POST requests exist (user submitted form)
+    if request.method == 'POST' and 'username' in request.form and 'password' in request.form:
+        # Create variables for easy access
+        username = request.form['username']
+        password = request.form['password']
+
+    # Checking if account exists in MySQL DB (All queries parametererized to prevent SQL injection)
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT * FROM tabulator WHERE tabulatorid = %s AND tabulatorpass = %s', (username, password))
+    # Fetch one record and return result
+    admin_account = cursor.fetchone()
+
+    if username == '' or password == '':
+        return render_template('index.html', msg='Please enter username and password!')
+
+    # If account exists n accounts table in out database
+    if admin_account:
+        # Create session data accesible for other routes in flask
+        session['loggedin'] = True
+        session['username'] = admin_account['tabulatorid']
+        session['role'] = 'admin' # Set the role to admin
+        return render_template('adminpanel.html', username=session['username'])
+
+    return redirect(url_for('admin'))
+
+@app.route('/adminpanel', methods=['GET', 'POST'])
+def adminpanel():
+    if session['role'] == 'admin':
+        pass
+    else:
+        return redirect(url_for('index'))
+    if 'loggedin' in session:
+        # cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        # cursor.execute('SELECT * FROM candidates')
+        # candidates = cursor.fetchall()
+        # cursor.execute('SELECT * FROM accounts')
+        # accounts = cursor.fetchall()
+        # cursor.execute('SELECT * FROM tabulator')
+        # tabulator = cursor.fetchall()
+        # return render_template('adminpanel.html', candidates=candidates, accounts=accounts, tabulator=tabulator)
+        return render_template('adminpanel.html', username=session['username'])
+    else:
+        return redirect(url_for('adminlogin'))
+    
+
 
 # Specifying our self signed SSL certificate (Realisticly should pay for a real one, self signed for demo purposes)
 if __name__ == "__main__":

@@ -146,6 +146,43 @@ body.loggedin {
   padding: 5px;
   margin: 0 0 10px 0;
 }
-table, th, td {
-    border:1px solid black;
+
+table {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th {
+    border: 1px solid #000000;
+    background-color: #c9ffbe;
+    text-align: left;
+    padding: 8px;
   }
+
+td {
+  border: 1px solid #000000;
+  text-align: left;
+  padding: 8px;
+}
+
+tr:nth-child(even) {
+  background-color: #dddddd;
+}
+
+button {
+    background-color: #ffb0b0;
+    color: rgb(0, 0, 0);
+    padding: 5px 10px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    text-transform: uppercase;
+    transition: all 0.3s ease-in-out;
+}
+  
+  button:hover {
+    background-color: #a1fba4;
+    transform: scale(1.2);
+}
+  
