@@ -23,7 +23,7 @@ mysql = MySQL(app)
 def index():
     return render_template('index.html')
 
-# http://localhost:5000/pythonlogin/ - the following will be our login page, which will use both GET and POST requests
+# http://localhost:5000/login/ - the following will be our login page, which will use both GET and POST requests
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     # Output message if authentication error
