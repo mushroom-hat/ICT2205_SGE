@@ -3,6 +3,7 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
+<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 <h2>Welcome, administrator {{ admin }}!</h2>
 <br>Here you can tabulate votes!
 {% endblock %}
