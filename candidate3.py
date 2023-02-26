@@ -1,23 +1,52 @@
+import hashlib
 import random
+from Crypto.Hash import SHA256
+from Crypto.Random import random
+from Crypto.PublicKey import ECC
 
-global prime,gen
+global prime, gen
 global private_key
+global r, public_key
 
-# generate public key pair once p,g varibles are received
+n = 115792089210356248762697446949407573529996955224135760342422259061068512044369
+
+global challenge, G
+
+# generate public key pair once p,g variables are received
 def genKey(p,g):
     global private_key
-    global prime,gen
-    pk = random.randrange(3, p)
-    y = pow(g, pk, p)
-    private_key = pk
+    global prime, gen
+    private_key = random.randrange(3, p)
+    y = pow(g, private_key, p)  # elgamal public key
+
     prime = p
     gen = g
+
     return y
 
-def pk():
-    return private_key
+def getEllipticParameters(generator_pt):
+    global G, public_key
+
+    G = generator_pt
+    public_key = G * private_key  # generate pub key for Schnorr
+    mx = hashlib.sha256(str(int(public_key.x)).encode("utf-8")).hexdigest()
+    my = hashlib.sha256(str(int(public_key.y)).encode("utf-8")).hexdigest()
+
+    return mx,my
+
 def decrypt(a):
     global private_key
-
     # returns a^-x
     return pow(a, -abs(private_key), prime)
+
+def generateA():
+    global challenge
+    global r
+    r = random.randint(1, n - 1)
+    A = r * G  # Point A, sends it over
+    return public_key, A
+
+# accepts challenge c and returns message m
+def accept_challenge(c):
+    m = (r + (private_key * c)) % n  # sends it over
+    return m
