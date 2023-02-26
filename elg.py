@@ -204,8 +204,6 @@ def decrypt(b,combined_res):
     #v_r = (b * libnum.invmod(combined_res % p, p)) % p
     v_r = (b * (combined_res % p)) % p  # combined_res = a^-x1 * a^-x2 * a^-x3 = a^-(x1+x2+x3)
 
-    print("\nResult: ", v_r)
-
     # Now search for g^i
     for i in range(0, 2 ** 64):
         if (pow(g, i, p) == v_r):
