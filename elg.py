@@ -79,8 +79,8 @@ def schnorr_verify(challenge,generator_point,pub_key, signature):
     # A + c*p = r*G + c*(G*x) = G(r+cx) = G * m
     lhs = A + (challenge * pub_key)
     rhs = m * generator_point
-    print(lhs)
-    print(rhs)
+    # print(lhs)
+    # print(rhs)
     return lhs == rhs
 
 
@@ -190,9 +190,9 @@ def additive(ct1, ct2):
     a2, b2 = ct2
     a = (a1 * a2) % p
     b = (b1 * b2) % p
-    print(f"\nEncrypted (v1)\na={a1}\nb={b1}")
-    print(f"\nEncrypted (v2)\na={a2}\nb={b2}")
-    print(f"\nAfter homomorphic encryption\na={a}\nb={b}")
+    #print(f"\nEncrypted (v1)\na={a1}\nb={b1}")
+    #print(f"\nEncrypted (v2)\na={a2}\nb={b2}")
+    #print(f"\nAfter homomorphic encryption\na={a}\nb={b}")
     return a, b  # returns added ciphertexts
 
 #  decrypt after voting process ends, for tallying votes
