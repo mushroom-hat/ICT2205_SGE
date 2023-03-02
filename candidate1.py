@@ -18,7 +18,6 @@ def genKey(p,g):
     global prime, gen
     private_key = random.randrange(3, p)
     y = pow(g, private_key, p)  # elgamal public key
-
     prime = p
     gen = g
 

@@ -121,12 +121,13 @@ def main():
 
 
     # add shnorrs protocol here, allows Candidates to prove that they know value x
+    # hash Shnorr's public key to ensure that candidates sent the correct public key, the one that was generated using getEllipticParameters()
     pub_key, A = candidate1.generateA()
     mx = hashlib.sha256(str(int(pub_key.x)).encode("utf-8")).hexdigest()
     my = hashlib.sha256(str(int(pub_key.y)).encode("utf-8")).hexdigest()
     c = generate_challenge()
 
-    # hash verification, ensure that the public key commitment is correct
+    # hash verification, ensure that the public key for Schnorr commitment is correct
     if [mx, my] == can1_hash:
         print("Hash verification of Shnorr public key for Candidate 1 is correct")
         m = candidate1.accept_challenge(c)  # candidate receives challenge and computes m
@@ -141,11 +142,12 @@ def main():
             #decrypt(res[0], res[1], pk1 + pk2 + pk3)
 
     # add shnorrs protocol here, allows Candidates to prove that they know value x
+    # hash Shnorr's public key to ensure that candidates sent the correct public key, the one that was generated using getEllipticParameters()
     pub_key, A = candidate2.generateA()
     mx = hashlib.sha256(str(int(pub_key.x)).encode("utf-8")).hexdigest()
     my = hashlib.sha256(str(int(pub_key.y)).encode("utf-8")).hexdigest()
 
-    # hash verification, ensure that the public key commitment is correct
+    # hash verification, ensure that the public key for Schnorr commitment is correct
     if [mx, my] == can2_hash:
         print("Hash verification of Shnorr public key for Candidate 2 is correct")
         m = candidate2.accept_challenge(c)  # candidate receives challenge and computes m
@@ -159,11 +161,12 @@ def main():
             print("Candidate 2 Total Votes: " + str(votes))
 
     # add shnorrs protocol here, allows Candidates to prove that they know value x
+    # hash Shnorr's public key to ensure that candidates sent the correct public key, the one that was generated using getEllipticParameters()
     pub_key, A = candidate3.generateA()
     mx = hashlib.sha256(str(int(pub_key.x)).encode("utf-8")).hexdigest()
     my = hashlib.sha256(str(int(pub_key.y)).encode("utf-8")).hexdigest()
 
-    # hash verification, ensure that the public key commitment is correct
+    # hash verification, ensure that the public key for Schnorr commitment is correct
     if [mx, my] == can3_hash:
         print("Hash verification of Shnorr public key for Candidate 3 is correct")
         m = candidate3.accept_challenge(c)  # candidate receives challenge and computes m
