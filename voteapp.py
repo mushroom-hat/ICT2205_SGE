@@ -4,6 +4,8 @@ import MySQLdb.cursors
 import re
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+import hashlib
+import secrets
 
 app = Flask(__name__)
 
@@ -21,6 +23,32 @@ mysql = MySQL(app)
 
 @app.route('/')
 def index():
+    # Create accounts. Username is same as password.
+    accounts = ["minyao", "ruiheng", "zhenghao", "zhiwen", "jiazhe"]
+
+    for acc in accounts:
+        username = password = acc
+
+        # Check if account already exists in MySQL DB
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('SELECT * FROM accounts WHERE username = %s', (username,))
+        account = cursor.fetchone()
+        if account:
+            msg = 'Account already exists!'
+        else:
+            # Hash the password with the salt
+            salt = secrets.token_hex(96)
+            salted_password = (salt + password).encode('utf-8')
+            hashed_password = hashlib.sha512(salted_password).hexdigest()
+
+            # Insert new account into MySQL DB
+            cursor.execute('INSERT INTO accounts (username, password, salt) VALUES (%s, %s, %s)',
+                           (username, hashed_password, salt))
+            mysql.connection.commit()
+            cursor.close()
+
+            msg = 'Account created successfully!'
+
     return render_template('index.html')
 
 # http://localhost:5000/login/ - the following will be our login page, which will use both GET and POST requests
@@ -39,7 +67,7 @@ def login():
 
     # Checking if account exists in MySQL DB (All queries parametererized to prevent SQL injection)
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT * FROM accounts WHERE username = %s AND password = %s', (username, password))
+    cursor.execute('SELECT * FROM accounts WHERE username = %s', (username,))
     # Fetch one record and return result
     account = cursor.fetchone()
 
@@ -48,40 +76,44 @@ def login():
 
     # If account exists n accounts table in out database
     if account:
-        # Create session data accesible for other routes in flask
-        session['loggedin'] = True
-        session['id'] = account['id']
-        session['username'] = account['username']
-        session['pubkey'] = account['pubkey']
-        session['role'] = 'user' # Set the role to user
+        # Hash the password with the salt from the database and use SHA-512
+        salted_password = (account['salt'] + password).encode('utf-8')
+        hashed_password = hashlib.sha512(salted_password).hexdigest()
+        if hashed_password == account['password']:
+            # Create session data accesible for other routes in flask
+            session['loggedin'] = True
+            session['id'] = account['id']
+            session['username'] = account['username']
+            session['pubkey'] = account['pubkey']
+            session['role'] = 'user' # Set the role to user
 
-        if session['pubkey'] == None or session['pubkey'] == '':
-            private_key = rsa.generate_private_key(
-                public_exponent=65537,
-                key_size=2048
-            )
+            if session['pubkey'] == None or session['pubkey'] == '':
+                private_key = rsa.generate_private_key(
+                    public_exponent=65537,
+                    key_size=2048
+                )
 
-            # Convert private key to string
-            private_key_str = private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            ).decode()
+                # Convert private key to string
+                private_key_str = private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption()
+                ).decode()
 
-            public_key = private_key.public_key()
+                public_key = private_key.public_key()
 
-            # Convert public key to string
-            public_key_str = public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            ).decode()
+                # Convert public key to string
+                public_key_str = public_key.public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo
+                ).decode()
 
-            cursor.execute('UPDATE accounts SET pubkey = %s, privkey = %s WHERE id = %s', (public_key_str, private_key_str, session['id']))
-            mysql.connection.commit() # Commit the update
-            cursor.close()
+                cursor.execute('UPDATE accounts SET pubkey = %s, privkey = %s WHERE id = %s', (public_key_str, private_key_str, session['id']))
+                mysql.connection.commit() # Commit the update
+                cursor.close()
 
-        # Redirect to home page after successful login
-        return redirect(url_for('home'))
+            # Redirect to home page after successful login
+            return redirect(url_for('home'))
     else:
         # If account doesnt exist or username/password incorrect
         return render_template('index.html', msg='Incorrect username or password!')
@@ -191,7 +223,7 @@ def adminpanel():
         return render_template('adminpanel.html', username=session['username'])
     else:
         return redirect(url_for('adminlogin'))
-    
+
 
 
 # Specifying our self signed SSL certificate (Realisticly should pay for a real one, self signed for demo purposes)
