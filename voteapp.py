@@ -1,3 +1,6 @@
+import json
+
+import requests
 from flask import Flask, render_template, redirect, url_for, request, session
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
@@ -11,26 +14,28 @@ app = Flask(__name__)
 app.secret_key = '123456'
 
 # Enter your database connection details below
-app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_HOST'] = "localhost"
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'P@ssw0rd123'
+app.config['MYSQL_PASSWORD'] = "P@ssw0rd123"
 app.config['MYSQL_DB'] = 'pythonlogin'
 
 # Intialize MySQL
 mysql = MySQL(app)
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# http://localhost:5000/login/ - the following will be our login page, which will use both GET and POST requests
+
+# http://localhost:5000/pythonlogin/ - the following will be our login page, which will use both GET and POST requests
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     # Output message if authentication error
     msg = ''
     username = ''
     password = ''
-    
+
     # Check if "username" and "password" POST requests exist (user submitted form)
     if request.method == 'POST' and 'username' in request.form and 'password' in request.form:
         # Create variables for easy access
@@ -53,7 +58,7 @@ def login():
         session['id'] = account['id']
         session['username'] = account['username']
         session['pubkey'] = account['pubkey']
-        session['role'] = 'user' # Set the role to user
+        session['role'] = 'user'  # Set the role to user
 
         if session['pubkey'] == None or session['pubkey'] == '':
             private_key = rsa.generate_private_key(
@@ -76,8 +81,9 @@ def login():
                 format=serialization.PublicFormat.SubjectPublicKeyInfo
             ).decode()
 
-            cursor.execute('UPDATE accounts SET pubkey = %s, privkey = %s WHERE id = %s', (public_key_str, private_key_str, session['id']))
-            mysql.connection.commit() # Commit the update
+            cursor.execute('UPDATE accounts SET pubkey = %s, privkey = %s WHERE id = %s',
+                           (public_key_str, private_key_str, session['id']))
+            mysql.connection.commit()  # Commit the update
             cursor.close()
 
         # Redirect to home page after successful login
@@ -85,22 +91,24 @@ def login():
     else:
         # If account doesnt exist or username/password incorrect
         return render_template('index.html', msg='Incorrect username or password!')
-    
+
     # If it reaches here, some weird and unexpected error occured
     return render_template('index.html', msg='Strange Error Occured!')
+
 
 # http://localhost:5000/logout - this will be the logout page
 @app.route('/logout')
 def logout():
     # Remove session data, this will log the user out
-   session.pop('loggedin', None)
-   session.pop('id', None)
-   session.pop('username', None)
-   # Redirect to login page
-   return render_template('index.html', msg='')
+    session.pop('loggedin', None)
+    session.pop('id', None)
+    session.pop('username', None)
+    # Redirect to login page
+    return render_template('index.html', msg='')
+
 
 # http://localhost:5000/home - this will be the home voting page, only accessible for loggedin users
-@app.route('/home', methods=['GET', 'POST'])
+@app.route('/home', methods=['GET'])
 def home():
     if session['role'] == 'user':
         pass
@@ -120,26 +128,28 @@ def home():
         public_key_nice = public_key_nice.replace("-----BEGIN PUBLIC KEY-----\n", "")
         public_key_nice = public_key_nice.replace("-----END PUBLIC KEY-----\n", "")
         public_key_nice = public_key_nice.replace("\n", "")
-        
+
         cursor.execute('SELECT * FROM candidates')
         candidates = cursor.fetchall()
 
-        if request.method == 'POST':
-            # Get the ID that use voted from POST FORM
-            candidate_id = request.form['candidate_id']
-            # Change print statement to whatever the system do with the vote
-            print(f"User voted for candidate with ID: {candidate_id}")
+
+        # if request.method == 'POST':
+        #     # User is loggedin show them the home page
+        #     return render_template('vote_success.html', username=session['username'])
 
         # User is loggedin show them the home page
-        return render_template('home.html', username=session['username'], candidates=candidates, public_key_nice=public_key_nice)
+        return render_template('home.html', username=session['username'], candidates=candidates,
+                               public_key_nice=public_key_nice)
         cursor.close()
 
     # User is not loggedin redirect to login page
     return redirect(url_for('index'))
 
+
 @app.route('/admin')
 def admin():
     return render_template('admin.html')
+
 
 @app.route('/adminlogin', methods=['GET', 'POST'])
 def adminlogin():
@@ -147,7 +157,7 @@ def adminlogin():
     msg = ''
     username = ''
     password = ''
-    
+
     # Check if "username" and "password" POST requests exist (user submitted form)
     if request.method == 'POST' and 'username' in request.form and 'password' in request.form:
         # Create variables for easy access
@@ -168,10 +178,23 @@ def adminlogin():
         # Create session data accesible for other routes in flask
         session['loggedin'] = True
         session['username'] = admin_account['tabulatorid']
-        session['role'] = 'admin' # Set the role to admin
+        session['role'] = 'admin'  # Set the role to admin
         return render_template('adminpanel.html', username=session['username'])
 
     return redirect(url_for('admin'))
+
+@app.route('/vote_success')
+def vote_success():
+    return render_template('vote_success.html', username=session['username'])
+
+@app.route('/sendVote', methods=['POST'])
+def serverReceiveVote():
+    data = request.json
+    a1 = data['a']
+    b1 = data['b']
+    print(f'Vote Registered: {a1,b1}')
+    return redirect(url_for('vote_success'))
+
 
 @app.route('/adminpanel', methods=['GET', 'POST'])
 def adminpanel():
@@ -191,7 +214,6 @@ def adminpanel():
         return render_template('adminpanel.html', username=session['username'])
     else:
         return redirect(url_for('adminlogin'))
-    
 
 
 # Specifying our self signed SSL certificate (Realisticly should pay for a real one, self signed for demo purposes)

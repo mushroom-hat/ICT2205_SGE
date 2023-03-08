@@ -38,12 +38,14 @@ def decrypt(a):
     # returns a^-x
     return pow(a, -abs(private_key), prime)
 
+
 def generateA():
     global challenge
     global r
     r = random.randint(1, n - 1)
     A = r * G  # Point A, sends it over
     return public_key, A
+
 
 # accepts challenge c and returns message m
 def accept_challenge(c):
