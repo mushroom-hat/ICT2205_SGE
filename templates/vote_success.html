@@ -1,11 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-    <h1>Vote Success</h1>
-</head>
-<body>
+{% extends 'layout.html' %}
 
-</body>
-</html>
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<h2>Your vote have been registered, {{ username }}</h2>
+<h3>Thank you for voting.</h3>
+<button id="redirectButton" class="redirectButton" onclick="window.location.href='/home'">Return Home</button>
+{% endblock %}

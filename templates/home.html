@@ -9,10 +9,15 @@
 <h2>Welcome, {{ username }}!</h2>
 <br>Please cast your <b>single</b> vote for your preferred candidate. Once your vote is submitted it cannot be changed. Your vote is fully <b>ANONYMOUS</b> with our <b>Zero Knowledge Proof (ZKP)</b> system. The voting key is used to ensure <FONT COLOR="GREEN"><b>fair and secure voting</b></FONT> when tabulating the votes.
 <p>
-  <b>Your voting key is:</b> {{public_key_nice}}
+  {% if voteFlag == 0 %}
+    <b><FONT COLOR="RED">STATUS: You have not voted yet. Please click on the VOTED button to cast your vote.</FONT></b>
+  {% else %}
+    <b><FONT COLOR="RED">STATUS:</FONT><FONT COLOR="GREEN"> You have already voted. Please wait for the results announcement.</FONT></b>
+  {% endif %}
 </p>
 <h2>Your Candidates</h2>
 
+{% if voteFlag == 0 %}
 <table>
   <tr>
     <th>Candidate ID</th>
@@ -25,23 +30,37 @@
     <td>{{candidate['name']}}</td>
     <td>
         <input type="hidden" name="candidate_id" value="{{candidate['id']}}">
-        <button type="submit" id="{{candidate['id']}}" onclick="encrypt(event)">VOTE</button>
+        <button type="submit" id="{{candidate['id']}}" onclick="encrypt(event)" class = "voteButton">VOTE</button>
     </td>
   </tr>
   {% endfor %}
 </table>
+{% else %}
+  <table>
+    <tr>
+      <th>Candidate ID</th>
+      <th>Candidate Name</th>
+    </tr>
+    {% for candidate in candidates %}
+    <tr>
+      <td>{{candidate['id']}}</td>
+      <td>{{candidate['name']}}</td>
+    </tr>
+    {% endfor %}
+  </table>
+{% endif %}
+
 
 <script type="text/javascript">
   function encrypt(event) {
-
     // Generated values
     const combined_public_key = bigInt('113236324890190174609358651675320642763849561247383040970955514967182461134931134577396076292821111077094461130348252112379666330439647375001768602996845948070756390221972834621878204280801169765909908438203836085809613163922085567847636535044051664081490152680533813525982897228496325802183758567246872014431690209657982934019538663157418803161790431411070042163075941655729633451146233876522217055789566846378722649059613299585733390006749173479365699327021440', 10);
     const p = bigInt("9644018395590835246183437442456263590896403546363358699905042038620885780657221648055258927067788554399199796840639326339802578418381426706447733722073103"); // assign p value here
     const g = bigInt("1769090854204954238944926379910150389013448441043932449510969393563753205788409944536747839020624254542150273176634833274246404714421960841027254020874956"); // assign g value here
 
     var candidate_id = event.target.id;
-    var list_of_candidates_result = new Set([[0,0,0]]);
-    if (candidate_id === "2F38FSHF") {
+    var list_of_candidates_result = [[0,0,0]];
+    if (candidate_id === "2F38ZSHD") {
       list_of_candidates_result = [[1,0,0]];
     } else if (candidate_id === "38FHFDSD") {
       list_of_candidates_result = [[0,1,0]];
@@ -50,24 +69,36 @@
     }
     console.log(event.target.id +" : "+ list_of_candidates_result);
 
+    let ciphertexts = [];
     for (let i = 0; i < list_of_candidates_result.length; i++) {
        for (let j = 0; j < list_of_candidates_result[i].length; j++) {
          console.log(list_of_candidates_result[i][j]);
          let pt = list_of_candidates_result[i][j];
          let [a1, b1] = encryptData(combined_public_key, pt);
-         const request = new XMLHttpRequest();
-
-         const data = {
-                    a: a1,
-                    b: b1
-                    };
-         request.open('POST', `/sendVote`);
-         request.setRequestHeader("Content-Type", "application/json");
-                  console.log(a1, b1);
-
-         request.send(JSON.stringify(data));
+         let bigIntNuma1 = BigInt(a1);
+         let bigIntNumb1 = BigInt(b1);
+         ciphertexts.push([bigIntNuma1.toString(), bigIntNumb1.toString()]);
+         //console.log(a1, b1);
+         console.log(bigIntNuma1, bigIntNumb1);
        }
      }
+
+     const request = new XMLHttpRequest();
+     request.onreadystatechange = function() {
+     if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+        // Redirect the user to the vote_success page
+        window.location.href = "/vote_success";
+       }
+     };
+
+     const data = {
+                    c1: ciphertexts[0],
+                    c2: ciphertexts[1],
+                    c3: ciphertexts[2]
+                  };
+     request.open('POST', `/sendVote`);
+     request.setRequestHeader("Content-Type", "application/json");              
+     request.send(JSON.stringify(data));
   }
 
 function encryptData(combined_public_key, pt) {

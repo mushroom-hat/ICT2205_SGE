@@ -7,11 +7,16 @@ import MySQLdb.cursors
 import re
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+from functools import wraps
 
 app = Flask(__name__)
 
-# Change this to your secret key (can be anything, it's for extra protection)
-app.secret_key = '123456'
+# Use for generating sessionID for encryption
+app.secret_key = 'psoadkaspodj@aspdjaspo123dfas3489rdj!!#!@!4112312903u213u9812' # Randomly typed on my keyboard basically uncrackable
+
+# Configure session cookie settings
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = True
 
 # Enter your database connection details below
 app.config['MYSQL_HOST'] = "localhost"
@@ -27,6 +32,14 @@ mysql = MySQL(app)
 def index():
     return render_template('index.html')
 
+# Decorator function to redirect if user is not logged in
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('username') is None or session.get('loggedin') is not True:
+            return redirect('/login',code=302)
+        return f(*args, **kwargs)
+    return decorated_function
 
 # http://localhost:5000/pythonlogin/ - the following will be our login page, which will use both GET and POST requests
 @app.route('/login', methods=['GET', 'POST'])
@@ -57,34 +70,7 @@ def login():
         session['loggedin'] = True
         session['id'] = account['id']
         session['username'] = account['username']
-        session['pubkey'] = account['pubkey']
         session['role'] = 'user'  # Set the role to user
-
-        if session['pubkey'] == None or session['pubkey'] == '':
-            private_key = rsa.generate_private_key(
-                public_exponent=65537,
-                key_size=2048
-            )
-
-            # Convert private key to string
-            private_key_str = private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            ).decode()
-
-            public_key = private_key.public_key()
-
-            # Convert public key to string
-            public_key_str = public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            ).decode()
-
-            cursor.execute('UPDATE accounts SET pubkey = %s, privkey = %s WHERE id = %s',
-                           (public_key_str, private_key_str, session['id']))
-            mysql.connection.commit()  # Commit the update
-            cursor.close()
 
         # Redirect to home page after successful login
         return redirect(url_for('home'))
@@ -116,32 +102,19 @@ def home():
         return redirect(url_for('index'))
     # Check if user is loggedin
     if 'loggedin' in session:
+        id = session['id']
+        voteFlag = 0
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        votekey = session['pubkey']
-        if votekey == None or votekey == '':
-            cursor.execute('SELECT pubkey FROM accounts WHERE id = %s', (session['id'],))
-            public_key_nice = cursor.fetchone()['pubkey']
-        else:
-            public_key_nice = votekey
-
-        # Formatting the public key for printing later
-        public_key_nice = public_key_nice.replace("-----BEGIN PUBLIC KEY-----\n", "")
-        public_key_nice = public_key_nice.replace("-----END PUBLIC KEY-----\n", "")
-        public_key_nice = public_key_nice.replace("\n", "")
-
         cursor.execute('SELECT * FROM candidates')
         candidates = cursor.fetchall()
 
-
-        # if request.method == 'POST':
-        #     # User is loggedin show them the home page
-        #     return render_template('vote_success.html', username=session['username'])
-
-        # User is loggedin show them the home page
-        return render_template('home.html', username=session['username'], candidates=candidates,
-                               public_key_nice=public_key_nice)
+        cursor.execute(f'SELECT ciphertext1 FROM accounts WHERE id = {id}')
+        if cursor.fetchone()['ciphertext1'] != None:
+            voteFlag = 1
         cursor.close()
-
+        # User is loggedin show them the home page
+        return render_template('home.html', username=session['username'], candidates=candidates, voteFlag=voteFlag)
+        
     # User is not loggedin redirect to login page
     return redirect(url_for('index'))
 
@@ -184,17 +157,44 @@ def adminlogin():
     return redirect(url_for('admin'))
 
 @app.route('/vote_success')
+@login_required
 def vote_success():
+    id = session['id']
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    cursor.execute(f'SELECT ciphertext1 FROM accounts WHERE id = {id}')
+    if cursor.fetchone()['ciphertext1'] == None:
+        cursor.close()
+        return redirect(url_for('home'))
+
     return render_template('vote_success.html', username=session['username'])
 
-@app.route('/sendVote', methods=['POST'])
-def serverReceiveVote():
-    data = request.json
-    a1 = data['a']
-    b1 = data['b']
-    print(f'Vote Registered: {a1,b1}')
-    return redirect(url_for('vote_success'))
 
+@app.route('/sendVote', methods=['POST'])
+@login_required
+def serverReceiveVote():
+    if session['role'] == 'user' and session['loggedin'] == True and session['id']:
+        data = request.json
+        cipher1 = data['c1']
+        cipher2 = data['c2']
+        cipher3 = data['c3']
+
+        # Each of the ciphertext stored in this format cpart1,cpart2
+        formatC1 = cipher1[0] + ',' + cipher1[1]
+        formatC2 = cipher2[0] + ',' + cipher2[1]
+        formatC3 = cipher3[0] + ',' + cipher3[1]
+
+        id = session['id']
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute(f'SELECT ciphertext1 FROM accounts WHERE id = {id}')
+        if cursor.fetchone()['ciphertext1'] != None:
+            print("Vote already registered, this won't be counted")
+            pass
+        else:
+            cursor.execute(f'UPDATE accounts SET ciphertext1 = "{formatC1}", ciphertext2 = "{formatC2}", ciphertext3 = "{formatC3}" WHERE id = {id}')
+            mysql.connection.commit()
+        cursor.close()
+    return redirect(url_for('vote_success'))
 
 @app.route('/adminpanel', methods=['GET', 'POST'])
 def adminpanel():

@@ -170,7 +170,7 @@ tr:nth-child(even) {
   background-color: #dddddd;
 }
 
-button {
+.voteButton {
     background-color: #ffb0b0;
     color: rgb(0, 0, 0);
     padding: 5px 10px;
@@ -181,8 +181,23 @@ button {
     transition: all 0.3s ease-in-out;
 }
   
-  button:hover {
+.voteButton:hover {
     background-color: #a1fba4;
     transform: scale(1.2);
 }
-  
+
+.redirectButton {
+    background-color: #b1dafe;
+    color: rgb(0, 0, 0);
+    padding: 5px 10px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    text-transform: uppercase;
+    transition: all 0.3s ease-in-out;
+}
+
+.redirectButton:hover {
+    background-color: #c9ffcb;
+    transform: scale(1.2);
+}
