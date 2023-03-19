@@ -8,13 +8,17 @@ import hashlib
 from Crypto.Hash import SHA256
 from Crypto.Random import random
 from Crypto.PublicKey import ECC
+from fastecdsa.curve import P256
+from fastecdsa.point import Point
 
 import candidate1, candidate2, candidate3
 
 curve = ECC.generate(curve='P-256')
-G = curve.pointQ
+x = 48439561293906451759052585252797914202762949526041747995844080717082404635286
+y = 36134250956749795798585127919587881956611106672985015071877198253568414405109
+G = Point(x, y, curve=P256)
 
-
+#G = (48439561293906451759052585252797914202762949526041747995844080717082404635286,36134250956749795798585127919587881956611106672985015071877198253568414405109)
 def get_generator(p: int):
     while True:
         # Find generator which doesn't share factor with p
@@ -57,9 +61,7 @@ g = 1769090854204954238944926379910150389013448441043932449510969393563753205788
 def initialise_candidates():
     # initialise candidate key generation, returns partial public key
     can1_public_key = candidate1.genKey(p,g)
-
     can2_public_key = candidate2.genKey(p,g)
-
     can3_public_key = candidate3.genKey(p,g)
 
     return can1_public_key * can2_public_key * can3_public_key
@@ -90,9 +92,16 @@ def schnorr_verify(challenge,generator_point,pub_key, signature):
 
 def main():
     combined_public_key = initialise_candidates()
+    with open("combined_public_key.txt", "w") as f:
+        f.write(str(combined_public_key))
+
     can1_hash, can2_hash, can3_hash = getHash()
     #combined_pk = combined_private_key([pk1, pk2, pk3])
     #combined_public_key = pow(g,combined_pk,p)
+
+    with open('combined_public_key.txt') as f:
+        lines = f.readlines()
+    combined_public_key = int(lines[0])
     print(f"Combined Public key:\ng={g}\nY={combined_public_key}\np={p}\n\n")
 
 
@@ -278,7 +287,6 @@ def additive(ct1, ct2):
 
 #  decrypt after voting process ends, for tallying votes
 #  decrypts each column for now only (a,b) in [(a,b), (a1,b1), (a2,b2)]
-
 def decrypt(b,combined_res):
     # will have to request all 3 candidate's a^-x, then multiply them together
     # original v_r = (b * libnum.invmod(pow(a, combined_pk, p), p)) % p
