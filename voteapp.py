@@ -112,8 +112,17 @@ def home():
         if cursor.fetchone()['ciphertext1'] != None:
             voteFlag = 1
         cursor.close()
+        
+        # Dynamic public key values from json file to render in home page
+        with open('pubpg.json', 'r') as pubfile:
+            pubpg = json.load(pubfile)
+        combined_pub = pubpg['combined_pub']
+        p = pubpg['p']
+        g = pubpg['g']
+        print(combined_pub)
+
         # User is loggedin show them the home page
-        return render_template('home.html', username=session['username'], candidates=candidates, voteFlag=voteFlag)
+        return render_template('home.html', username=session['username'], candidates=candidates, voteFlag=voteFlag, combined_pub=combined_pub, p=p, g=g)
         
     # User is not loggedin redirect to login page
     return redirect(url_for('index'))
