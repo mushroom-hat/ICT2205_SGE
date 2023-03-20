@@ -3,8 +3,8 @@ import random
 from Crypto.Hash import SHA256
 from Crypto.Random import random
 from Crypto.PublicKey import ECC
-
-global prime, gen
+import json
+global gen
 global private_key
 global r, public_key
 
@@ -24,6 +24,37 @@ def genKey(p,g):
     storePublicKey(y)
 
     return y
+
+
+def savePG(p, g):
+    parameters_json = {
+        "p": p,
+        "g": g
+    }
+    with open('parameters.json', 'w') as fp:
+        json.dump(parameters_json, fp)
+
+    fp.close()
+
+def savePG(p,g):
+    parameters_json = {
+    "p": p,
+    "g": g
+    }
+    with open('parameters.json', 'w') as fp:
+        json.dump(parameters_json, fp)
+
+    fp.close()
+
+def getGeneratorValue():
+    f = open('parameters.json')
+    data = json.load(f)
+    return data["g"]
+
+def getPrimeValue():
+    f = open('parameters.json')
+    data = json.load(f)
+    return data["p"]
 
 
 def storePublicKey(public_key):
@@ -64,9 +95,9 @@ def getEllipticParameters(generator_pt):
 def decrypt(a):
     private_key = getPrivateKey()
     # returns a^-x
-    return pow(a, -abs(private_key), prime)
+    return pow(a, -abs(private_key), getPrimeValue())
 
-def generateA():
+def generateA(G):
     global challenge
     global r
     r = random.randint(1, n - 1)

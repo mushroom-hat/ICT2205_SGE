@@ -3,14 +3,9 @@ import hashlib
 import random
 from Crypto.Hash import SHA256
 from Crypto.Random import random
-from Crypto.PublicKey import ECC
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import dh
-from cryptography.hazmat.backends import default_backend
+import json
 
-
-global prime, gen
-global private_key
+global gen
 global r, public_key
 
 # Generator point for elliptic curve P-256 and order n
@@ -20,11 +15,10 @@ global r, public_key
 # )
 n = 115792089210356248762697446949407573529996955224135760342422259061068512044369
 
-global challenge, G
+global challenge
 
 # generate public key pair once p,g variables are received
 def genKey(p,g):
-    global private_key
     global prime, gen
     private_key = random.randrange(3, p)
     y = pow(g, private_key, p)  # elgamal public key
@@ -33,6 +27,27 @@ def genKey(p,g):
     storePrivateKey(private_key)
     storePublicKey(y)
     return y
+
+def savePG(p,g):
+    parameters_json = {
+    "p": p,
+    "g": g
+    }
+    with open('parameters.json', 'w') as fp:
+        json.dump(parameters_json, fp)
+
+    fp.close()
+
+def getGeneratorValue():
+    f = open('parameters.json')
+    data = json.load(f)
+    return data["g"]
+
+def getPrimeValue():
+    f = open('parameters.json')
+    data = json.load(f)
+    return data["p"]
+
 
 def storePublicKey(public_key):
     # Save the PEM data to a file
@@ -60,7 +75,7 @@ def getPrivateKey():
 
 
 def getEllipticParameters(generator_pt):
-    global G, public_key
+    global public_key
 
     G = generator_pt
 
@@ -74,10 +89,10 @@ def getEllipticParameters(generator_pt):
 def decrypt(a):
     private_key = getPrivateKey()
     # returns a^-x
-    return pow(a, -abs(private_key), prime)
+    return pow(a, -abs(private_key), getPrimeValue())
 
 
-def generateA():
+def generateA(G):
     global challenge
     global r
     r = random.randint(1, n - 1)

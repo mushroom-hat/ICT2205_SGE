@@ -5,12 +5,11 @@ import random
 import libnum
 import sys
 import hashlib
-from Crypto.Hash import SHA256
 from Crypto.Random import random
 from Crypto.PublicKey import ECC
 from fastecdsa.curve import P256
 from fastecdsa.point import Point
-
+import json
 import candidate1, candidate2, candidate3
 
 curve = ECC.generate(curve='P-256')
@@ -30,7 +29,7 @@ def get_generator(p: int):
         return generator
 
 
-bits = 512
+bits = 32
 
 # each voter sends [x,y,z]
 x1 = 1
@@ -46,10 +45,15 @@ y3 = 0
 z3 = 1
 
 # generating global p and q
-#p = Crypto.Util.number.getPrime(bits, randfunc=Crypto.Random.get_random_bytes)
-#g = get_generator(p)
-p = 9644018395590835246183437442456263590896403546363358699905042038620885780657221648055258927067788554399199796840639326339802578418381426706447733722073103
-g = 1769090854204954238944926379910150389013448441043932449510969393563753205788409944536747839020624254542150273176634833274246404714421960841027254020874956
+p = Crypto.Util.number.getPrime(bits, randfunc=Crypto.Random.get_random_bytes)
+g = get_generator(p)
+# p = 171368984974755882030022627524358975769
+# g = 75841540937739416858034135864788500320
+# print(p,g)
+# p= 63241
+# g= 60213
+# p = 9644018395590835246183437442456263590896403546363358699905042038620885780657221648055258927067788554399199796840639326339802578418381426706447733722073103
+# g = 1769090854204954238944926379910150389013448441043932449510969393563753205788409944536747839020624254542150273176634833274246404714421960841027254020874956
 # # combining all 3 candidates' private keys for decryption at the end of the voting phase
 # def combined_private_key(keys):
 #     pk = 0
@@ -63,8 +67,16 @@ def initialise_candidates():
     can1_public_key = candidate1.genKey(p,g)
     can2_public_key = candidate2.genKey(p,g)
     can3_public_key = candidate3.genKey(p,g)
+    combined_public_key = can1_public_key * can2_public_key * can3_public_key
 
-    return can1_public_key * can2_public_key * can3_public_key
+    parameters_json = {"combined_pub": combined_public_key,
+    "p": p,
+    "g": g
+    }
+    with open('parameters.json', 'w') as fp:
+        json.dump(parameters_json, fp)
+
+    return combined_public_key
 
 # get hash for candidate's public key, for schnorr verification protocol later
 def getHash():
@@ -92,6 +104,7 @@ def schnorr_verify(challenge,generator_point,pub_key, signature):
 
 def main():
     combined_public_key = initialise_candidates()
+    print(combined_public_key)
     with open("combined_public_key.txt", "w") as f:
         f.write(str(combined_public_key))
 
@@ -101,7 +114,7 @@ def main():
 
     with open('combined_public_key.txt') as f:
         lines = f.readlines()
-    combined_public_key = int(lines[0])
+        combined_public_key = int(lines[0])
     print(f"Combined Public key:\ng={g}\nY={combined_public_key}\np={p}\n\n")
 
 
@@ -109,6 +122,7 @@ def main():
     ct1 = encrypt(combined_public_key, x1)
     ct2 = encrypt(combined_public_key, x2)
     ct3 = encrypt(combined_public_key, x3)
+
 
     res = additive(ct1, ct2)
     res = additive(res, ct3)
@@ -118,6 +132,13 @@ def main():
     ct1 = encrypt(combined_public_key, y1)
     ct2 = encrypt(combined_public_key, y2)
     ct3 = encrypt(combined_public_key, y3)
+
+    res1 = candidate1.decrypt(ct1[0])
+    res2 = candidate2.decrypt(ct1[0])
+    res3 = candidate3.decrypt(ct1[0])
+
+    votes = decrypt(ct1[1], res1 * res2 * res3)
+    print("======: " + str(votes))
 
     res = additive(ct1, ct2)
     res = additive(res, ct3)
@@ -135,7 +156,7 @@ def main():
 
 
     # add shnorrs protocol here, allows Candidates to prove that they know value x
-    pub_key, A = candidate1.generateA()
+    pub_key, A = candidate1.generateA(G)
     mx = hashlib.sha256(str(int(pub_key.x)).encode("utf-8")).hexdigest()
     my = hashlib.sha256(str(int(pub_key.y)).encode("utf-8")).hexdigest()
     c = generate_challenge()
@@ -155,7 +176,7 @@ def main():
             #decrypt(res[0], res[1], pk1 + pk2 + pk3)
 
     # add shnorrs protocol here, allows Candidates to prove that they know value x
-    pub_key, A = candidate2.generateA()
+    pub_key, A = candidate2.generateA(G)
     mx = hashlib.sha256(str(int(pub_key.x)).encode("utf-8")).hexdigest()
     my = hashlib.sha256(str(int(pub_key.y)).encode("utf-8")).hexdigest()
 
@@ -173,7 +194,7 @@ def main():
             print("Candidate 2 Total Votes: " + str(votes))
 
     # add shnorrs protocol here, allows Candidates to prove that they know value x
-    pub_key, A = candidate3.generateA()
+    pub_key, A = candidate3.generateA(G)
     mx = hashlib.sha256(str(int(pub_key.x)).encode("utf-8")).hexdigest()
     my = hashlib.sha256(str(int(pub_key.y)).encode("utf-8")).hexdigest()
 
@@ -273,8 +294,8 @@ def encrypt(combined_public_key, pt):
 
     return a1, b1
 
-# add both encrypted ciphertext together
 
+# add both encrypted ciphertext together
 def additive(ct1, ct2):
     a1, b1 = ct1
     a2, b2 = ct2

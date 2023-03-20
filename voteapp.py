@@ -147,7 +147,7 @@ def home():
         cursor.close()
         
         # Dynamic public key values from json file to render in home page
-        with open('pubpg.json', 'r') as pubfile:
+        with open('parameters.json', 'r') as pubfile:
             pubpg = json.load(pubfile)
         combined_pub = pubpg['combined_pub']
         p = pubpg['p']
