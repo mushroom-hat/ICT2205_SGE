@@ -2,6 +2,7 @@ import json
 
 import requests
 from flask import Flask, render_template, redirect, url_for, request, session
+from datetime import timedelta
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
 import re
@@ -15,11 +16,12 @@ import secrets
 app = Flask(__name__)
 
 # Use for generating sessionID for encryption
-app.secret_key = 'psoadkaspodj@aspdjaspo123dfas3489rdj!!#!@!4112312903u213u9812' # Randomly typed on my keyboard basically uncrackable
+app.secret_key = 'psoadkaspodj@aspdjaspo123dSALKs3489rFFASD!!#!@!4112312903u213u9812' # Randomly typed on my keyboard basically uncrackable
 
 # Configure session cookie settings
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=10)  # Session Expiry set to 5mins
 
 # Enter your database connection details below
 app.config['MYSQL_HOST'] = "localhost"
@@ -30,6 +32,10 @@ app.config['MYSQL_DB'] = 'pythonlogin'
 # Intialize MySQL
 mysql = MySQL(app)
 
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
 
 @app.route('/')
 def index():
@@ -91,7 +97,7 @@ def login():
     account = cursor.fetchone()
 
     if username == '' or password == '':
-        return render_template('index.html', msg='Please enter username and password!')
+        return render_template('index.html', msg='Session Expired / Not logged in, Please Re-login.')
 
     # If account exists n accounts table in out database
     if account:
@@ -104,6 +110,7 @@ def login():
             session['id'] = account['id']
             session['username'] = account['username']
             session['role'] = 'user'  # Set the role to user
+            session['logged_in'] = True
 
         # Redirect to home page after successful login
         return redirect(url_for('home'))
@@ -129,11 +136,10 @@ def logout():
 # http://localhost:5000/home - this will be the home voting page, only accessible for loggedin users
 @app.route('/home', methods=['GET'])
 def home():
-    if session['role'] == 'user':
-        pass
-    else:
-        return redirect(url_for('index'))
     # Check if user is loggedin
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
     if 'loggedin' in session:
         id = session['id']
         voteFlag = 0
@@ -141,7 +147,7 @@ def home():
         cursor.execute('SELECT * FROM candidates')
         candidates = cursor.fetchall()
 
-        cursor.execute(f'SELECT ciphertext1 FROM accounts WHERE id = {id}')
+        cursor.execute(f'SELECT ciphertext1 FROM accounts WHERE id = %s', (id,))
         if cursor.fetchone()['ciphertext1'] != None:
             voteFlag = 1
         cursor.close()
@@ -204,7 +210,7 @@ def vote_success():
     id = session['id']
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
-    cursor.execute(f'SELECT ciphertext1 FROM accounts WHERE id = {id}')
+    cursor.execute(f'SELECT ciphertext1 FROM accounts WHERE id = %s', (id,))
     if cursor.fetchone()['ciphertext1'] == None:
         cursor.close()
         return redirect(url_for('home'))
@@ -228,12 +234,14 @@ def serverReceiveVote():
 
         id = session['id']
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute(f'SELECT ciphertext1 FROM accounts WHERE id = {id}')
+        cursor.execute(f'SELECT ciphertext1 FROM accounts WHERE id = %s', (id,))
         if cursor.fetchone()['ciphertext1'] != None:
             print("Vote already registered, this won't be counted")
             pass
         else:
-            cursor.execute(f'UPDATE accounts SET ciphertext1 = "{formatC1}", ciphertext2 = "{formatC2}", ciphertext3 = "{formatC3}" WHERE id = {id}')
+            query = 'UPDATE accounts SET ciphertext1 = %s, ciphertext2 = %s, ciphertext3 = %s WHERE id = %s'
+            values = (formatC1, formatC2, formatC3, id)
+            cursor.execute(query, values)
             mysql.connection.commit()
         cursor.close()
     return redirect(url_for('vote_success'))
