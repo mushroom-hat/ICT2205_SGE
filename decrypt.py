@@ -15,6 +15,10 @@ import mysql.connector
 
 # curve = ECC.generate(curve='P-256')
 # G = curve.pointQ
+# Generator Point used for schnorr's verification https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
+x = 48439561293906451759052585252797914202762949526041747995844080717082404635286
+y = 36134250956749795798585127919587881956611106672985015071877198253568414405109
+G = Point(x, y, curve=P256)
 
 def savePG(p,g):
     parameters_json = {
@@ -38,18 +42,15 @@ def getPrimeValue():
 
 
 
-x = 48439561293906451759052585252797914202762949526041747995844080717082404635286
-y = 36134250956749795798585127919587881956611106672985015071877198253568414405109
-G = Point(x, y, curve=P256)
 
-# function to add all ciphertexts in DB
-
+# connect to SQL and add all votes
+# the result will be ct1, ct2 and ct3
 def sqlConnect():
     # Creating connection object
-    ct1 = 909458317,997369242
-    ct2 = 909458317,997369242
-    ct3 = 909458317,997369242
 
+    ct1 = 0
+    ct2 = 0
+    ct3 = 0
     try:
         mydb = mysql.connector.connect(
             host="localhost",
@@ -60,7 +61,14 @@ def sqlConnect():
         )
         print("MySQL Database connection successful")
         cursor = mydb.cursor()
-        cursor.execute("SELECT * from accounts;")
+        cursor.execute("SELECT * from accounts WHERE id=2;")
+        for account in cursor:
+            ct1 = int(account[4].split(",")[0]),int(account[4].split(",")[1])
+            ct2 = int(account[5].split(",")[0]),int(account[5].split(",")[1])
+            ct3 = int(account[6].split(",")[0]),int(account[6].split(",")[1])
+
+        cursor.execute("SELECT * from accounts EXCEPT SELECT * from accounts WHERE id=2;")
+
         for account in cursor:
             ciphertext1 = int(account[4].split(",")[0]),int(account[4].split(",")[1])
             ciphertext2 = int(account[5].split(",")[0]),int(account[5].split(",")[1])
@@ -87,63 +95,19 @@ def main():
     can1_hash, can2_hash, can3_hash = getHash()
 
 
-    # add shnorrs protocol here, allows Candidates to prove that they know value x
+    # Prover (Candidate) will generate the value A and send to Verifier
+    # at this stage, the verifier will also receive the commitment hash of the prover's public key. This public key will be used later on for schnorr's verification
 
-    # add shnorrs protocol here, allows Candidates to prove that they know value x
-    pub_key, A = candidate1.generateA(G)
-    mx = hashlib.sha256(str(int(pub_key.x)).encode("utf-8")).hexdigest()
-    my = hashlib.sha256(str(int(pub_key.y)).encode("utf-8")).hexdigest()
-    c = generate_challenge()
+    for candidateNo in range(1,4):
+        if verifyCommitment(candidateNo):
+            if candidateNo == 1:
+                candidateDecrypt(ct1, candidateNo)
+            if candidateNo == 2:
+                candidateDecrypt(ct2, candidateNo)
+            if candidateNo == 3:
+                candidateDecrypt(ct3, candidateNo)
 
-    # hash verification, ensure that the public key commitment is correct
-    if [mx, my] == can1_hash:
-        print("Hash verification of Shnorr public key for Candidate 1 is correct")
-        m = candidate1.accept_challenge(c)  # candidate receives challenge and computes m
-        signature = A, m
-        if schnorr_verify(c, G, pub_key, signature):
-            res1 = candidate1.decrypt(ct1[0])
-            res2 = candidate2.decrypt(ct1[0])
-            res3 = candidate3.decrypt(ct1[0])
 
-            votes = decrypt(ct1[1], res1 * res2 * res3)
-            print("Candidate 1 Total Votes: " + str(votes))
-            # decrypt(res[0], res[1], pk1 + pk2 + pk3)
-
-    # add shnorrs protocol here, allows Candidates to prove that they know value x
-    pub_key, A = candidate2.generateA(G)
-    mx = hashlib.sha256(str(int(pub_key.x)).encode("utf-8")).hexdigest()
-    my = hashlib.sha256(str(int(pub_key.y)).encode("utf-8")).hexdigest()
-
-    # hash verification, ensure that the public key commitment is correct
-    if [mx, my] == can2_hash:
-        print("Hash verification of Shnorr public key for Candidate 2 is correct")
-        m = candidate2.accept_challenge(c)  # candidate receives challenge and computes m
-        signature = A, m
-        if schnorr_verify(c, G, pub_key, signature):
-            res1 = candidate1.decrypt(ct2[0])
-            res2 = candidate2.decrypt(ct2[0])
-            res3 = candidate3.decrypt(ct2[0])
-
-            votes = decrypt(ct2[1], res1 * res2 * res3)
-            print("Candidate 2 Total Votes: " + str(votes))
-
-    # add shnorrs protocol here, allows Candidates to prove that they know value x
-    pub_key, A = candidate3.generateA(G)
-    mx = hashlib.sha256(str(int(pub_key.x)).encode("utf-8")).hexdigest()
-    my = hashlib.sha256(str(int(pub_key.y)).encode("utf-8")).hexdigest()
-
-    # hash verification, ensure that the public key commitment is correct
-    if [mx, my] == can3_hash:
-        print("Hash verification of Shnorr public key for Candidate 3 is correct")
-        m = candidate3.accept_challenge(c)  # candidate receives challenge and computes m
-        signature = A, m
-        if schnorr_verify(c, G, pub_key, signature):
-            res1 = candidate1.decrypt(ct3[0])
-            res2 = candidate2.decrypt(ct3[0])
-            res3 = candidate3.decrypt(ct3[0])
-
-            votes = decrypt(ct3[1], res1 * res2 * res3)
-            print("Candidate 3 Total Votes: " + str(votes))
 
 
 # get hash for candidate's public key to check against commitment, for schnorr verification protocol later
@@ -161,11 +125,12 @@ def generate_challenge():
     return challenge
 
 # Signature verification
-def schnorr_verify(challenge,generator_point,pub_key, signature):
+def schnorr_final_step(challenge,generator_point,pub_key, signature):
     A, m = signature
+
     # A + c*p = r*G + c*(G*x) = G(r+cx) = G * m
-    lhs = A + (challenge * pub_key)
-    rhs = m * generator_point
+    lhs = (challenge * pub_key) + m * generator_point
+    rhs = A
     # print(lhs)
     # print(rhs)
     return lhs == rhs
@@ -184,31 +149,31 @@ def candidateDecrypt(ciphertext, candidateNo):
         res3 = candidate3.decrypt(a)
 
         votes = decrypt(b, res1 * res2 * res3)
-        print("Candidate" + candidateNo + " Total Votes: " + str(votes))
+        print("Candidate" + str(candidateNo) + " Total Votes: " + str(votes))
 
 
 # function to determine that candidates knows the value of their private key
 def verifySchnorr(challenge, candidateNo):
     if candidateNo == 1:
-        pub_key, A = candidate1.generateA()
+        pub_key, A = candidate1.generateA(G)
         m = candidate1.accept_challenge(challenge)  # candidate receives challenge and computes m
         signature = A, m
-        if schnorr_verify(challenge, G, pub_key, signature):
+        if schnorr_final_step(challenge, G, pub_key, signature):
             return True
 
 
     if candidateNo == 2:
-        pub_key, A = candidate2.generateA()
+        pub_key, A = candidate2.generateA(G)
         m = candidate2.accept_challenge(challenge)  # candidate receives challenge and computes m
         signature = A, m
-        if schnorr_verify(challenge, G, pub_key, signature):
+        if schnorr_final_step(challenge, G, pub_key, signature):
             return True
 
     if candidateNo == 3:
-        pub_key, A = candidate3.generateA()
+        pub_key, A = candidate3.generateA(G)
         m = candidate3.accept_challenge(challenge)  # candidate receives challenge and computes m
         signature = A, m
-        if schnorr_verify(challenge, G, pub_key, signature):
+        if schnorr_final_step(challenge, G, pub_key, signature):
             return True
 
 
@@ -217,7 +182,7 @@ def verifyCommitment(candidateNo):
     # get commitment values of public key for each candidate
     can1_hash, can2_hash, can3_hash = getHash()
     if candidateNo == 1:
-        pub_key, A = candidate1.generateA()
+        pub_key, A = candidate1.generateA(G)
         mx = hashlib.sha256(str(int(pub_key.x)).encode("utf-8")).hexdigest()
         my = hashlib.sha256(str(int(pub_key.y)).encode("utf-8")).hexdigest()
 
@@ -227,7 +192,7 @@ def verifyCommitment(candidateNo):
             return True
 
     elif candidateNo == 2:
-        pub_key, A = candidate2.generateA()
+        pub_key, A = candidate2.generateA(G)
         mx = hashlib.sha256(str(int(pub_key.x)).encode("utf-8")).hexdigest()
         my = hashlib.sha256(str(int(pub_key.y)).encode("utf-8")).hexdigest()
 
@@ -237,7 +202,7 @@ def verifyCommitment(candidateNo):
             return True
 
     else:
-        pub_key, A = candidate3.generateA()
+        pub_key, A = candidate3.generateA(G)
         mx = hashlib.sha256(str(int(pub_key.x)).encode("utf-8")).hexdigest()
         my = hashlib.sha256(str(int(pub_key.y)).encode("utf-8")).hexdigest()
 

@@ -107,5 +107,5 @@ def generateA(G):
 # accepts challenge c and returns message m
 def accept_challenge(c):
     private_key = getPrivateKey()
-    m = (r + (private_key * c)) % n  # sends it over
+    m = (r - (private_key * c)) % n  # sends it over
     return m

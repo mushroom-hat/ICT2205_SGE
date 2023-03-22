@@ -80,7 +80,6 @@ def getEllipticParameters(generator_pt):
     G = generator_pt
 
     public_key = G * getPrivateKey()  # generate pub key for Schnorr
-    print(public_key)
     mx = hashlib.sha256(str(int(public_key.x)).encode("utf-8")).hexdigest()
     my = hashlib.sha256(str(int(public_key.y)).encode("utf-8")).hexdigest()
 
@@ -103,5 +102,5 @@ def generateA(G):
 # accepts challenge c and returns message m
 def accept_challenge(c):
     private_key = getPrivateKey()
-    m = (r + (private_key * c)) % n  # sends it over
+    m = (r - (private_key * c)) % n  # sends it over
     return m
