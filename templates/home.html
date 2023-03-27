@@ -92,7 +92,7 @@
      };
 
      const data = {
-                    c1: ciphertexts[0],
+                    c1:  [0],
                     c2: ciphertexts[1],
                     c3: ciphertexts[2]
                   };
@@ -107,7 +107,7 @@ function getRandomInt(max) {
 
 
 function encryptData(combined_public_key, pt) {
-    const plainText = bigInt(pt);
+    const plainText = bigInt(pt);z
     const r = bigInt(getRandomInt(p.minus(1).toJSNumber(),3));
 
     console.log(r);

@@ -41,8 +41,6 @@ def getPrimeValue():
     return data["p"]
 
 
-
-
 # connect to SQL and add all votes
 # the result will be ct1, ct2 and ct3
 def sqlConnect():
@@ -92,8 +90,6 @@ def main():
     # ct1 = 11621525,125256832
     # ct2 = 3365497144,845845285
     # ct3 = 909458317,997369242
-    can1_hash, can2_hash, can3_hash = getHash()
-
 
     # Prover (Candidate) will generate the value A and send to Verifier
     # at this stage, the verifier will also receive the commitment hash of the prover's public key. This public key will be used later on for schnorr's verification

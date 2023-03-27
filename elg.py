@@ -82,7 +82,14 @@ def initialise_candidates():
 
 def main():
     # initialise_Candidate requests candidates to set up a public-private key pair and returns their generated public key
-    combined_public_key = initialise_candidates()
+    #combined_public_key = initialise_candidates()
+    print(p)
+    print(g)
+    pk1 = int(input("Candidate 1 Public Key: "))
+    pk2 = int(input("Candidate 2 Public Key: "))
+    pk3 = int(input("Candidate 3 Public Key: "))
+
+    combined_public_key = pk1 * pk2 * pk3
 
     print("Elgamal Prime and Generator Values sent to Candidates for generation of public-private key pair")
     print("Received Combined Public Key for Encryption of Votes: " + str(combined_public_key))
