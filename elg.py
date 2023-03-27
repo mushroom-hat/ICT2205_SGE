@@ -2,9 +2,6 @@ from Crypto.Util.number import *
 from Crypto import Random
 import Crypto
 import random
-import libnum
-import sys
-import hashlib
 from Crypto.Random import random
 from Crypto.PublicKey import ECC
 from fastecdsa.curve import P256
@@ -30,7 +27,7 @@ def get_generator(p: int):
         return generator
 
 
-bits = 32
+bits = 128
 
 # each voter sends [x,y,z]
 x1 = 1
@@ -83,8 +80,8 @@ def initialise_candidates():
 def main():
     # initialise_Candidate requests candidates to set up a public-private key pair and returns their generated public key
     #combined_public_key = initialise_candidates()
-    print(p)
-    print(g)
+    print("P: " + str(p))
+    print("G: " + str(g))
     pk1 = int(input("Candidate 1 Public Key: "))
     pk2 = int(input("Candidate 2 Public Key: "))
     pk3 = int(input("Candidate 3 Public Key: "))
@@ -104,8 +101,38 @@ def main():
         combined_public_key = int(lines[0])
     print(f"Combined Public key:\ng={g}\nY={combined_public_key}\np={p}\n\n")
 
+    parameters_json = {"combined_pub": combined_public_key,
+                       "p": p,
+                       "g": g
+                       }
+    with open('parameters.json', 'w') as fp:
+        json.dump(parameters_json, fp)
 
+    print("Generator Point: " + str(x) + " " + str(y))
+    print("[+] Enter hash commitment by each candidate")
+    print("[+] Input Candidate 1's hash commitment, delimited by space")
+    candidate1_hash = input()
+    mx1 = candidate1_hash.split(" ")[0]
+    my1 = candidate1_hash.split(" ")[1]
+    c1 = mx1 + " " + my1
 
+    print("[+] Input Candidate 2's hash commitment, delimited by space")
+    candidate2_hash = input()
+    mx2 = candidate2_hash.split(" ")[0]
+    my2 = candidate2_hash.split(" ")[1]
+    c2 = mx2 + " " + my2
+
+    print("[+] Input Candidate 3's hash commitment, delimited by space")
+    candidate3_hash = input()
+    mx3 = candidate3_hash.split(" ")[0]
+    my3 = candidate3_hash.split(" ")[1]
+
+    c3 = mx3 + " " + my3
+
+    with open('hash_commitments.txt', 'w') as f:
+        f.write(c1 + "\n")
+        f.write(c2 + "\n")
+        f.write(c3)
 
 
 # function to determine that candidates knows the value of their private key

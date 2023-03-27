@@ -74,7 +74,7 @@
        for (let j = 0; j < list_of_candidates_result[i].length; j++) {
          console.log('Before Decrypted Value: ' + list_of_candidates_result[i][j]);
          let pt = list_of_candidates_result[i][j];
-         let [a1, b1] = encryptData(combined_public_key, pt);
+         let [a1, b1] = encryptData(combined_public_key, pt, g, p);
          let bigIntNuma1 = BigInt(a1);
          let bigIntNumb1 = BigInt(b1);
          ciphertexts.push([bigIntNuma1.toString(), bigIntNumb1.toString()]);
@@ -92,7 +92,7 @@
      };
 
      const data = {
-                    c1:  [0],
+                    c1: ciphertexts[0],
                     c2: ciphertexts[1],
                     c3: ciphertexts[2]
                   };
@@ -101,23 +101,19 @@
      request.send(JSON.stringify(data));
   }
 
-function getRandomInt(max) {
-    return Math.floor(Math.random() * max);
+
+
+  function getRandomInt(min, max) {  min = bigInt(min);
+  max = bigInt(max);  const range = max.minus(min);
+  const randomBigInt = bigInt.randBetween(min, max);  return randomBigInt;
   }
 
-
-function encryptData(combined_public_key, pt) {
-    const plainText = bigInt(pt);z
-    const r = bigInt(getRandomInt(p.minus(1).toJSNumber(),3));
-
-    console.log(r);
+  function encryptData(combined_public_key, pt, g, p) {  const plainText = bigInt(pt);
+    const r = getRandomInt(bigInt(3), p.minus(1));
     const a1 = g.modPow(r, p); // a1 = g^r mod p
     const b1 = combined_public_key.modPow(r, p).multiply(g.modPow(plainText, p)).mod(p); // b1 = (y^r * g^pt) mod p
-
-    return [parseInt(a1), b1];
+    return [a1.toString(), b1.toString()];
   }
-
-
 
 </script>
 {% endblock %}

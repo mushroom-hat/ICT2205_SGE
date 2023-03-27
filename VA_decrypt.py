@@ -75,18 +75,18 @@ def sqlConnect():
         )
         print("MySQL Database connection successful")
         cursor = mydb.cursor()
-        cursor.execute("SELECT * from accounts WHERE id=2;")
+        cursor.execute("SELECT * from accounts WHERE id=1;")
         for account in cursor:
-            ct1 = int(account[4].split(",")[0]),int(account[4].split(",")[1])
-            ct2 = int(account[5].split(",")[0]),int(account[5].split(",")[1])
-            ct3 = int(account[6].split(",")[0]),int(account[6].split(",")[1])
+            ct1 = int(account[3].split(",")[0]),int(account[3].split(",")[1])
+            ct2 = int(account[4].split(",")[0]),int(account[4].split(",")[1])
+            ct3 = int(account[5].split(",")[0]),int(account[5].split(",")[1])
 
-        cursor.execute("SELECT * from accounts EXCEPT SELECT * from accounts WHERE id=2;")
+        cursor.execute("SELECT * from accounts EXCEPT SELECT * from accounts WHERE id=1;")
 
         for account in cursor:
-            ciphertext1 = int(account[4].split(",")[0]),int(account[4].split(",")[1])
-            ciphertext2 = int(account[5].split(",")[0]),int(account[5].split(",")[1])
-            ciphertext3 = int(account[6].split(",")[0]),int(account[6].split(",")[1])
+            ciphertext1 = int(account[3].split(",")[0]),int(account[3].split(",")[1])
+            ciphertext2 = int(account[4].split(",")[0]),int(account[4].split(",")[1])
+            ciphertext3 = int(account[5].split(",")[0]),int(account[5].split(",")[1])
             res = additive(ct1, ciphertext1)
             ct1 = res
             res2 = additive(ct2, ciphertext2)
@@ -153,19 +153,7 @@ def main():
 
     print("[+] Vote Tallying process will now begin")
     print("[-] =====================================================================")
-    print("[+] Enter hash commitment by each candidate")
-    print("[+] Input Candidate 1's hash commitment, delimited by space")
-    candidate1_hash = input()
-    mx1, my1 = candidate1_hash.split(" ")
 
-    print("[+] Input Candidate 2's hash commitment, delimited by space")
-
-    candidate2_hash = input()
-    mx2, my2 = candidate2_hash.split(" ")
-
-    print("[+] Input Candidate 3's hash commitment, delimited by space")
-    candidate3_hash = input()
-    mx3, my3 = candidate3_hash.split(" ")
 
     print("[-] =====================================================================")
     print("[+] Commencing Verification of Schnorr's Protocol")
@@ -204,8 +192,21 @@ def main():
     tmp2 = int(A3.split(" ")[1])
     A3 = Point(tmp1, tmp2, curve=P256)
 
+
+    with open('hash_commitments.txt', 'r') as f:
+        lines = f.readlines()
+        tmp = lines[0].split(" ")
+        mx1, my1 = tmp[0], tmp[1]
+
+        tmp = lines[1].split(" ")
+        mx2, my2 = tmp[0], tmp[1]
+
+        tmp = lines[2].split(" ")
+        mx3, my3 = tmp[0], tmp[1]
+
+
     print("[+] Voting Authority will now verify public key used for Schnorr")
-    print("[-] =====================================================================")
+    print("=====================================================================")
     if verifyCommitment(1, public_key1, [mx1, my1]):
         print("Hash verification of Shnorr public key for Candidate 1 is correct")
 
@@ -215,12 +216,12 @@ def main():
             if verifyCommitment(3, public_key3, [mx3, my3]):
                 print("Hash verification of Shnorr public key for Candidate 3 is correct")
 
-    print("[-] =====================================================================")
+    print("=====================================================================")
     print("[+] Voting Authority will verify knowledge private key using Schnorr's protocol")
     print("[+] Send Challenge value (C) to candidates")
     challenge = generate_challenge()
     print("[+] C: {}".format(challenge))
-    print("[-] =====================================================================")
+    print("=====================================================================")
     print("[+] Candidates will now return the response to the challenge")
     print("[+] Input Candidate 1's response")
 
@@ -231,7 +232,7 @@ def main():
 
     print("[+] Input Candidate 3's response")
     m3 = input()
-    print("[-] =====================================================================")
+    print("=====================================================================")
 
     schn1 = 0
     schn2 = 0
@@ -250,7 +251,7 @@ def main():
         print("[+] [+] Schnorr verification for Candidate 3 is successful")
 
     if schn1 and schn2 and schn3:
-        print("[-] =====================================================================")
+        print("=====================================================================")
         print("[+] Retrieving encrypted votes from DB...")
         ct1, ct2, ct3 = sqlConnect()
 
@@ -259,7 +260,7 @@ def main():
         print("Requesting Candidate 3 to decrypt ciphertexts now")
 
         print("Ciphertexts to decrypt:")
-        print("[-] =====================================================================")
+        print("=====================================================================")
         print("Requesting all candidates to decrypt Ciphertext 1: {}".format(ct1[0]))
         res1 = int(input("Input Candidate 1's decrypted value: "))
         res2 = int(input("Input Candidate 2's decrypted value: "))
@@ -287,7 +288,7 @@ def main():
                     print("Candidate 1" + " Total Votes: " + str(votes1))
                     print("Candidate 2" + " Total Votes: " + str(votes2))
                     print("Candidate 3" + " Total Votes: " + str(votes3))
-                    print("[-] =====================================================================")
+                    print("=====================================================================")
 
 
 

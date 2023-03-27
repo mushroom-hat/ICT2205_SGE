@@ -10,8 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from functools import wraps
 
-import hashlib
-import secrets
+import bcrypt
 
 app = Flask(__name__)
 
@@ -32,6 +31,7 @@ app.config['MYSQL_DB'] = 'pythonlogin'
 # Intialize MySQL
 mysql = MySQL(app)
 
+pepper = b"p3pp3r_p3pp3r_p3pp3r_p3pp3r_p3pp3r_p3pp3r"  # Pepper For Password
 
 @app.before_request
 def make_session_permanent():
@@ -52,14 +52,13 @@ def index():
         if account:
             msg = 'Account already exists!'
         else:
-            # Hash the password with the salt
-            salt = secrets.token_hex(96)
-            salted_password = (salt + password).encode('utf-8')
-            hashed_password = hashlib.sha512(salted_password).hexdigest()
+            # Hash the password with bcrypt and a higher number of iterations
+            salt = bcrypt.gensalt(rounds=12)
+            hashed_password = bcrypt.hashpw(password.encode('utf-8') + pepper, salt)
 
             # Insert new account into MySQL DB
-            cursor.execute('INSERT INTO accounts (username, password, salt) VALUES (%s, %s, %s)',
-                           (username, hashed_password, salt))
+            cursor.execute('INSERT INTO accounts (username, password) VALUES (%s, %s)',
+                           (username, hashed_password))
             mysql.connection.commit()
             cursor.close()
 
@@ -101,10 +100,9 @@ def login():
 
     # If account exists n accounts table in out database
     if account:
-        # Hash the password with the salt from the database and use SHA-512
-        salted_password = (account['salt'] + password).encode('utf-8')
-        hashed_password = hashlib.sha512(salted_password).hexdigest()
-        if hashed_password == account['password']:
+        # Verify the password with bcrypt with pepper
+        hashed_password = account['password'].encode('utf-8')
+        if bcrypt.checkpw(password.encode('utf-8') + pepper, hashed_password):
             # Create session data accesible for other routes in flask
             session['loggedin'] = True
             session['id'] = account['id']
@@ -166,44 +164,6 @@ def home():
     # User is not loggedin redirect to login page
     return redirect(url_for('index'))
 
-
-@app.route('/admin')
-def admin():
-    return render_template('admin.html')
-
-
-@app.route('/adminlogin', methods=['GET', 'POST'])
-def adminlogin():
-    # Output message if authentication error
-    msg = ''
-    username = ''
-    password = ''
-
-    # Check if "username" and "password" POST requests exist (user submitted form)
-    if request.method == 'POST' and 'username' in request.form and 'password' in request.form:
-        # Create variables for easy access
-        username = request.form['username']
-        password = request.form['password']
-
-    # Checking if account exists in MySQL DB (All queries parametererized to prevent SQL injection)
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT * FROM tabulator WHERE tabulatorid = %s AND tabulatorpass = %s', (username, password))
-    # Fetch one record and return result
-    admin_account = cursor.fetchone()
-
-    if username == '' or password == '':
-        return render_template('index.html', msg='Please enter username and password!')
-
-    # If account exists n accounts table in out database
-    if admin_account:
-        # Create session data accesible for other routes in flask
-        session['loggedin'] = True
-        session['username'] = admin_account['tabulatorid']
-        session['role'] = 'admin'  # Set the role to admin
-        return render_template('adminpanel.html', username=session['username'])
-
-    return redirect(url_for('admin'))
-
 @app.route('/vote_success')
 @login_required
 def vote_success():
@@ -245,26 +205,6 @@ def serverReceiveVote():
             mysql.connection.commit()
         cursor.close()
     return redirect(url_for('vote_success'))
-
-@app.route('/adminpanel', methods=['GET', 'POST'])
-def adminpanel():
-    if session['role'] == 'admin':
-        pass
-    else:
-        return redirect(url_for('index'))
-    if 'loggedin' in session:
-        # cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        # cursor.execute('SELECT * FROM candidates')
-        # candidates = cursor.fetchall()
-        # cursor.execute('SELECT * FROM accounts')
-        # accounts = cursor.fetchall()
-        # cursor.execute('SELECT * FROM tabulator')
-        # tabulator = cursor.fetchall()
-        # return render_template('adminpanel.html', candidates=candidates, accounts=accounts, tabulator=tabulator)
-        return render_template('adminpanel.html', username=session['username'])
-    else:
-        return redirect(url_for('adminlogin'))
-
 
 # Specifying our self signed SSL certificate (Realisticly should pay for a real one, self signed for demo purposes)
 if __name__ == "__main__":
