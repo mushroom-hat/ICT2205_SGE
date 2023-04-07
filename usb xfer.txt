@@ -1,0 +1,33 @@
+import psutil
+
+def storePrivateKey(private_key):
+    # Serialize the private key to PEM format
+    def create_privatekey_file(drive_path):
+    # Save the PEM data to a file
+        with open(drive_path + "can1_private_key.txt", "w") as f:
+            f.write(str(private_key))
+
+    for partition in psutil.disk_partitions():
+        if 'removable' in partition.opts:
+            drive_path = partition.mountpoint
+            create_privatekey_file(drive_path)
+
+
+
+def getPrivateKey():
+
+    while True:
+        # Search for the external storage drive containing the private key file
+        for partition in psutil.disk_partitions():
+            print("finding...")
+            if 'removable' in partition.opts:
+                drive_path = partition.mountpoint
+                key_file_path = os.path.join(drive_path, 'can1_private_key.txt')
+                if os.path.isfile(key_file_path):
+                    # Read the private key from the file
+                    with open(key_file_path, 'r') as f:
+                        lines = f.readlines()
+                    private_key = int(lines[0])
+                    print(private_key)
+                    return private_key
+        time.sleep(5)
