@@ -7,7 +7,7 @@ from Crypto.Random import random
 import json
 import psutil
 global gen
-global r, public_key
+global r
 from fastecdsa.curve import P256
 from fastecdsa.point import Point
 # Generator point for elliptic curve P-256 and order n

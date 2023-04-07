@@ -72,7 +72,6 @@ def getPrivateKey():
     while True:
         # Search for the external storage drive containing the private key file
         for partition in psutil.disk_partitions():
-            print("finding...")
             if 'removable' in partition.opts:
                 drive_path = partition.mountpoint
                 key_file_path = os.path.join(drive_path, 'can1_private_key.txt')
@@ -81,7 +80,6 @@ def getPrivateKey():
                     with open(key_file_path, 'r') as f:
                         lines = f.readlines()
                     private_key = int(lines[0])
-                    print(private_key)
                     return private_key
         time.sleep(5)
 

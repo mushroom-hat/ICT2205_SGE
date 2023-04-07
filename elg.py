@@ -7,7 +7,6 @@ from Crypto.PublicKey import ECC
 from fastecdsa.curve import P256
 from fastecdsa.point import Point
 import json
-import candidate1, candidate2, candidate3
 
 # Generator Point used for schnorr's verification https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
 curve = ECC.generate(curve='P-256')

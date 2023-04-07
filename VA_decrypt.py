@@ -1,7 +1,5 @@
 import hashlib
 import random
-import candidate1, candidate2, candidate3
-from Crypto.PublicKey import ECC
 from fastecdsa.curve import P256
 from fastecdsa.point import Point
 import json
@@ -205,15 +203,21 @@ def main():
         mx3, my3 = tmp[0], tmp[1]
 
 
+    s1 = 0
+    s2 = 0
+    s3 = 0
     print("[+] Voting Authority will now verify public key used for Schnorr")
     print("=====================================================================")
     if verifyCommitment(1, public_key1, [mx1, my1]):
+        s1 = True
         print("Hash verification of Shnorr public key for Candidate 1 is correct")
 
         if verifyCommitment(2, public_key2, [mx2, my2]):
+            s2 = True
             print("Hash verification of Shnorr public key for Candidate 2 is correct")
 
             if verifyCommitment(3, public_key3, [mx3, my3]):
+                s3 = True
                 print("Hash verification of Shnorr public key for Candidate 3 is correct")
 
     print("=====================================================================")
@@ -234,9 +238,9 @@ def main():
     m3 = input()
     print("=====================================================================")
 
-    schn1 = 0
-    schn2 = 0
-    schn3 = 0
+    schn1 = False
+    schn2 = False
+    schn3 = False
 
     if verifySchnorr(public_key1, A1, challenge, int(m1), 1):
         schn1 = True
